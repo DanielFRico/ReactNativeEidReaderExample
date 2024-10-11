@@ -1,118 +1,168 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import * as React from 'react';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  useColorScheme,
   View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
+import EIdReader, {type EIdReadResult} from 'react-native-eid-reader';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+export default function App() {
+  const [result, setResult] = React.useState<EIdReadResult>();
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  React.useEffect(() => {
+    EIdReader.addOnTagDiscoveredListener(() => {
+      console.log('Tag Discovered');
+    });
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+    EIdReader.addOnNfcStateChangedListener(state => {
+      console.log('NFC State Changed:', state);
+    });
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+    return () => {
+      EIdReader.stopReading();
+      EIdReader.removeListeners();
+    };
+  }, []);
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const startReading = () => {
+    EIdReader.startReading({
+      mrzInfo: {
+        expirationDate: '331102',
+        birthDate: '980215',
+        documentNumber: 'BD162203',
+      },
+      includeRawData: true,
+      includeImages: true,
+    })
+      .then(res => {
+        console.log(`status: ${res.status}`);
+        console.log(`result: ${JSON.stringify(res)}`);
+        setResult(res);
+      })
+      .catch(e => {
+        console.error(e.message);
+      });
+  };
+
+  const stopReading = () => {
+    EIdReader.stopReading();
+  };
+
+  const openNfcSettings = async () => {
+    try {
+      const result = await EIdReader.openNfcSettings();
+      console.log(result);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const isNfcSupported = async () => {
+    try {
+      const result = await EIdReader.isNfcSupported();
+      console.log(result);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const isNfcEnabled = async () => {
+    try {
+      const result = await EIdReader.isNfcEnabled();
+      console.log(result);
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+    <>
+      <ScrollView style={styles.container}>
+        <View style={styles.box}>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity onPress={startReading} style={styles.button}>
+              <Text style={styles.buttonText}>Start Reading</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={stopReading} style={styles.button}>
+              <Text style={styles.buttonText}>Stop Reading</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity onPress={isNfcSupported} style={styles.button}>
+              <Text style={styles.buttonText}>Is NFC Supported</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={isNfcEnabled} style={styles.button}>
+              <Text style={styles.buttonText}>Is NFC Enabled</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={openNfcSettings} style={styles.button}>
+              <Text style={styles.buttonText}>Open NFC Settings</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.text}>{JSON.stringify(result, null, 2)}</Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    backgroundColor: '#252526',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  buttonContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 16,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  button: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
   },
-  highlight: {
-    fontWeight: '700',
+  buttonText: {
+    color: '#252526',
+    textAlign: 'center',
+  },
+  text: {
+    color: '#fff',
+  },
+  box: {
+    flex: 1,
+    padding: 16,
+    gap: 8,
+  },
+  overlayBox: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  infoBox: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    minHeight: 200,
+  },
+  infoText: {
+    color: '#252526',
+    textAlign: 'center',
+    fontSize: 22,
   },
 });
-
-export default App;
